@@ -1,0 +1,10 @@
+- Checking registry.
+✔ Checking registry.
+- Updating files.
+✔ Created 4 files:
+  - src/components/ui/table.tsx
+  - src/components/ui/card.tsx
+  - src/components/ui/select.tsx
+  - src/components/ui/badge.tsx
+ℹ Skipped 1 file: (files might be identical, use --overwrite to overwrite)
+  - src/components/ui/button.tsx

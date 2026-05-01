@@ -1,0 +1,29 @@
+npm warn exec The following package was not found and will be installed: shadcn@4.6.0
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+- Preflight checks.
+✔ Preflight checks.
+- Verifying framework.
+✔ Verifying framework. Found Next.js.
+- Validating Tailwind CSS. Found v4.
+✔ Validating Tailwind CSS. Found v4.
+- Validating import alias.
+✔ Validating import alias.
+- Writing components.json.
+✔ Writing components.json.
+- Checking registry.
+✔ Checking registry.
+- Installing dependencies.
+- Installing dependencies.
+✔ Installing dependencies.
+- Updating fonts.
+✔ Updating fonts.
+- Updating files.
+✔ Created 2 files:
+  - src/components/ui/button.tsx
+  - src/lib/utils.ts
+- Updating src/app/globals.css
+✔ Updating src/app/globals.css
+
+Project initialization completed.
+You may now add components.
+
