@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCallback, useEffect, useState } from "react";
+import { BriefcaseBusiness, Clock3, Layers3, Pencil } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface Job {
   job_id: string;
@@ -22,42 +24,72 @@ interface Analytics {
   platform: { labels: string[]; data: number[] };
   status: { labels: string[]; data: number[] };
   trend: { labels: string[]; data: number[] };
+  recent_discovery_24h?: number;
 }
+
+const PAGE_SIZE = 15;
+
+const JOB_STATUSES = ["NEW", "APPLIED", "SKIP", "INTERVIEW", "REJECTED"] as const;
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recentDiscoveryCount, setRecentDiscoveryCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Helper untuk mendapatkan URL API secara dinamis berdasarkan IP browser saat ini (misal localhost atau Tailscale IP)
-  const getApiUrl = (path: string) => {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+
+  const getApiUrl = useCallback((path: string) => {
+    if (apiBaseUrl) {
+      return `${apiBaseUrl}${path}`;
+    }
     if (typeof window !== "undefined") {
-      return `http://${window.location.hostname}:8088${path}`;
+      return `${window.location.protocol}//${window.location.hostname}:8088${path}`;
     }
     return `http://localhost:8088${path}`;
-  };
+  }, [apiBaseUrl]);
 
-  const fetchData = async () => {
-    try {
-      const [jobsRes, analyticsRes] = await Promise.all([
-        fetch(getApiUrl("/api/jobs")),
-        fetch(getApiUrl("/api/analytics")),
-      ]);
-      const jobsData = await jobsRes.json();
-      const analyticsData = await analyticsRes.json();
-      
-      setJobs(jobsData.jobs || []);
-      setAnalytics(analyticsData);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadDashboard = useCallback(async () => {
+    const offset = (page - 1) * PAGE_SIZE;
+    const [jobsRes, analyticsRes] = await Promise.all([
+      fetch(getApiUrl(`/api/jobs?limit=${PAGE_SIZE}&offset=${offset}`)),
+      fetch(getApiUrl("/api/analytics")),
+    ]);
+    const jobsData = await jobsRes.json();
+    const analyticsData = (await analyticsRes.json()) as Analytics;
+
+    const list = Array.isArray(jobsData.jobs) ? jobsData.jobs : [];
+    setJobs(list);
+    const total =
+      typeof jobsData.total === "number" ? jobsData.total : list.length;
+    setTotalPages(Math.max(1, Math.ceil(total / PAGE_SIZE)));
+
+    setAnalytics(analyticsData);
+    setRecentDiscoveryCount(
+      typeof analyticsData.recent_discovery_24h === "number"
+        ? analyticsData.recent_discovery_24h
+        : list.filter(
+            (job: Job) =>
+              new Date(job.discovered_at).getTime() >
+              Date.now() - 24 * 60 * 60 * 1000,
+          ).length,
+    );
+  }, [getApiUrl, page]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    let cancelled = false;
+    setLoading(true);
+    loadDashboard()
+      .catch((error) => console.error("Error fetching data:", error))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadDashboard]);
 
   const handleStatusChange = async (jobId: string, newStatus: string) => {
     try {
@@ -66,14 +98,21 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      
+
       if (res.ok) {
-        // Update local state
-        setJobs(jobs.map(job => job.job_id === jobId ? { ...job, status: newStatus } : job));
-        // Refresh analytics
+        setJobs((prevJobs) =>
+          prevJobs.map((job) =>
+            job.job_id === jobId ? { ...job, status: newStatus } : job,
+          ),
+        );
         const analyticsRes = await fetch(getApiUrl("/api/analytics"));
-        const analyticsData = await analyticsRes.json();
+        const analyticsData = (await analyticsRes.json()) as Analytics;
         setAnalytics(analyticsData);
+        setRecentDiscoveryCount(
+          typeof analyticsData.recent_discovery_24h === "number"
+            ? analyticsData.recent_discovery_24h
+            : 0,
+        );
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -82,128 +121,193 @@ export default function Dashboard() {
   };
 
   const getPlatformColor = (platform: string) => {
-    if (platform.toLowerCase() === 'linkedin') return "bg-blue-600 hover:bg-blue-700";
-    if (platform.toLowerCase() === 'glints') return "bg-red-600 hover:bg-red-700";
-    return "bg-gray-600";
+    if (platform.toLowerCase() === "linkedin")
+      return "border-0 bg-sky-100 text-sky-800";
+    if (platform.toLowerCase() === "glints")
+      return "border-0 bg-rose-100 text-rose-800";
+    return "border-0 bg-stone-200 text-stone-700";
   };
 
-  if (loading) return <div className="p-8 text-center text-xl">Loading Dashboard...</div>;
+  if (loading)
+    return (
+      <div className="p-8 text-center text-base text-muted-foreground">
+        Loading dashboard...
+      </div>
+    );
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Job Sniper Dashboard</h1>
+    <div className="mx-auto w-full max-w-7xl space-y-6">
+      {analytics && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm text-muted-foreground">
+                Platform Distribution
+              </CardTitle>
+              <div className="rounded-full bg-violet-100 p-2 text-violet-700">
+                <BriefcaseBusiness className="size-4" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {analytics.platform.labels.map((label, i) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{label}</span>
+                  <Badge variant="secondary" className="bg-muted text-foreground">
+                    {analytics.platform.data[i]} jobs
+                  </Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm text-muted-foreground">
+                Application Status
+              </CardTitle>
+              <div className="rounded-full bg-amber-100 p-2 text-amber-800">
+                <Layers3 className="size-4" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {analytics.status.labels.map((label, i) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{label}</span>
+                  <span className="text-2xl font-semibold tracking-tight">
+                    {analytics.status.data[i]}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm text-muted-foreground">
+                Recent Discovery
+              </CardTitle>
+              <div className="rounded-full bg-sky-100 p-2 text-sky-800">
+                <Clock3 className="size-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-semibold tracking-tight">
+                {recentDiscoveryCount}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                New jobs in the last 24 hours
+              </p>
+            </CardContent>
+          </Card>
         </div>
+      )}
 
-        {/* Analytics Cards */}
-        {analytics && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Platform Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {analytics.platform.labels.map((label, i) => (
-                    <div key={label} className="flex justify-between items-center">
-                      <span className="font-medium">{label}</span>
-                      <Badge variant="secondary">{analytics.platform.data[i]} jobs</Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Application Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {analytics.status.labels.map((label, i) => (
-                    <div key={label} className="flex justify-between items-center">
-                      <span className="font-medium">{label}</span>
-                      <span className="text-2xl font-bold">{analytics.status.data[i]}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Recent Discovery</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {jobs.filter(j => new Date(j.discovered_at) > new Date(Date.now() - 24*60*60*1000)).length}
-                </div>
-                <p className="text-xs text-slate-500 mt-1">New jobs in the last 24 hours</p>
-              </CardContent>
-            </Card>
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
+          <CardTitle>Job Opportunities</CardTitle>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              Page {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-border/80"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Prev
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-border/80"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </Button>
           </div>
-        )}
-
-        {/* Data Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Job Opportunities</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Platform</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead className="w-[300px]">Title</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {jobs.slice(0, 50).map((job) => ( // Pagination handled later or simple slice for now
-                    <TableRow key={job.job_id}>
-                      <TableCell className="whitespace-nowrap">{job.discovered_at.substring(0, 10)}</TableCell>
-                      <TableCell>
-                        <Badge className={getPlatformColor(job.platform)}>{job.platform}</Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{job.company}</TableCell>
-                      <TableCell>{job.title}</TableCell>
-                      <TableCell>
-                        <Select 
-                          defaultValue={job.status} 
-                          onValueChange={(val) => handleStatusChange(job.job_id, val)}
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <Table>
+              <TableHeader className="bg-muted/40">
+                <TableRow className="border-b border-border/60 hover:bg-transparent">
+                  <TableHead className="px-3">Date</TableHead>
+                  <TableHead className="px-3">Platform</TableHead>
+                  <TableHead className="px-3">Company</TableHead>
+                  <TableHead className="w-[340px] px-3">Title</TableHead>
+                  <TableHead className="px-3">Status</TableHead>
+                  <TableHead className="px-3 text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {jobs.map((job) => (
+                  <TableRow
+                    key={job.job_id}
+                    className="border-b border-border/50 transition-colors last:border-b-0 hover:bg-muted/45"
+                  >
+                    <TableCell className="px-3">
+                      {job.discovered_at.substring(0, 10)}
+                    </TableCell>
+                    <TableCell className="px-3">
+                      <Badge className={getPlatformColor(job.platform)}>
+                        {job.platform}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-3 font-medium">
+                      {job.company}
+                    </TableCell>
+                    <TableCell className="px-3">{job.title}</TableCell>
+                    <TableCell className="px-3">
+                      <Select
+                        value={job.status}
+                        onValueChange={(val) => {
+                          if (!val || val === job.status) return;
+                          handleStatusChange(job.job_id, val);
+                        }}
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="h-8 min-w-[140px] rounded-xl border-border/80 px-3 font-normal shadow-none hover:bg-muted/40"
                         >
-                          <SelectTrigger className="w-[130px]">
-                            <SelectValue placeholder="Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NEW">NEW</SelectItem>
-                            <SelectItem value="APPLIED">APPLIED</SelectItem>
-                            <SelectItem value="SKIP">SKIP</SelectItem>
-                            <SelectItem value="INTERVIEW">INTERVIEW</SelectItem>
-                            <SelectItem value="REJECTED">REJECTED</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild={true}>
-                          <a href={job.link} target="_blank" rel="noopener noreferrer">View</a>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-        
-      </div>
+                          <Pencil className="size-4 shrink-0 text-muted-foreground" />
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(JOB_STATUSES.includes(
+                            job.status as (typeof JOB_STATUSES)[number],
+                          )
+                            ? JOB_STATUSES
+                            : [...JOB_STATUSES, job.status]
+                          ).map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="px-3 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl border-border/80"
+                        onClick={() =>
+                          window.open(job.link, "_blank", "noopener,noreferrer")
+                        }
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
