@@ -42,13 +42,8 @@ export default function Dashboard() {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
 
   const getApiUrl = useCallback((path: string) => {
-    if (apiBaseUrl) {
-      return `${apiBaseUrl}${path}`;
-    }
-    if (typeof window !== "undefined") {
-      return `${window.location.protocol}//${window.location.hostname}:8088${path}`;
-    }
-    return `http://localhost:8088${path}`;
+    if (apiBaseUrl) return `${apiBaseUrl}${path}`;
+    return `/api/mana-uang${path}`;
   }, [apiBaseUrl]);
 
   const loadDashboard = useCallback(async () => {

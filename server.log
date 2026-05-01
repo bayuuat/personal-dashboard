@@ -1,0 +1,9 @@
+nohup: ignoring input
+
+> personal-dashboard@0.1.0 start
+> next start
+
+▲ Next.js 16.2.4
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.18:3000
+✓ Ready in 317ms

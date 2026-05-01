@@ -84,8 +84,7 @@ export default function ManaUangPage() {
 
   const getApiUrl = useCallback((path: string) => {
     if (apiBaseUrl) return `${apiBaseUrl}${path}`;
-    if (typeof window !== "undefined") return `${window.location.protocol}//${window.location.hostname}:8089${path}`;
-    return `http://localhost:8089${path}`;
+    return `/api/jobs${path}`;
   }, [apiBaseUrl]);
 
   const selectedMonthValue = selectedMonth === "all" ? "" : selectedMonth;
