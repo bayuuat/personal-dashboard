@@ -16,6 +16,23 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### API Configuration (Dev/Prod)
+
+Copy env example:
+
+```bash
+cp .env.example .env.local
+```
+
+Set backend URL in `.env.local`:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://100.123.25.78:8088
+```
+
+If `NEXT_PUBLIC_API_BASE_URL` is not set, app will fallback to dynamic host
+(`http(s)://<current-host>:8088`).
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
