@@ -29,17 +29,23 @@ Copy env example:
 cp .env.example .env.local
 ```
 
-Set backend URL untuk server-side rewrites di `.env.local`:
+Set backend URL dan PIN di `.env.local`:
 
 ```bash
 JOBS_API_BASE_URL=http://100.123.25.78:8088
 MANA_UANG_API_BASE_URL=http://100.123.25.78:8089
+APP_LOGIN_PIN=pin-kamu
+APP_SESSION_SECRET=string-acak-panjang
 ```
 
-Jika tidak diset, Next fallback ke `NEXT_PUBLIC_*` lalu ke `http://127.0.0.1:8088` /
-`http://127.0.0.1:8089` saat build/dev config dibaca.
+Untuk rewrites backend: jika `JOBS_API_BASE_URL` / `MANA_UANG_API_BASE_URL` tidak diset, Next fallback ke `NEXT_PUBLIC_*` lalu ke `http://127.0.0.1:8088` dan `:8089` saat config dibaca.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Akses & login
+
+Semua rute (kecuali `/login` dan `/api/auth/*`) membutuhkan cookie sesi HTTP-only bertanda HMAC.
+Di development, jika `APP_SESSION_SECRET` kosong, dipakai nilai fallback tidak aman (hanya untuk lokal).
+
+Setelah login, proxy `/jobs-api` / `/mana-uang-api` ikut dilindungi middleware. Tombol **Keluar** di header membersihkan sesi.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

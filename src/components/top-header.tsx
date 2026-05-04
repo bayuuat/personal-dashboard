@@ -1,7 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Search } from "lucide-react";
+import { LogOut, Search } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   "/": {
@@ -13,6 +15,11 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
     subtitle: "Lihat transaksi dan insight pengeluaran dalam satu tempat.",
   },
 };
+
+async function logout() {
+  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+  window.location.assign("/login");
+}
 
 export function TopHeader() {
   const pathname = usePathname();
@@ -26,14 +33,26 @@ export function TopHeader() {
           <h1 className="text-xl font-semibold tracking-tight text-foreground">{meta.title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{meta.subtitle}</p>
         </div>
-        <div className="relative w-full max-w-xl shrink-0">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-          <div
-            className="flex h-11 items-center rounded-full border border-border bg-card pl-10 pr-4 text-sm text-muted-foreground"
-            role="presentation"
-          >
-            Cari… (contoh)
+        <div className="flex w-full flex-col items-stretch gap-3 sm:flex-row sm:items-center lg:w-auto">
+          <div className="relative w-full max-w-xl shrink-0">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <div
+              className="flex h-11 items-center rounded-full border border-border bg-card pl-10 pr-4 text-sm text-muted-foreground"
+              role="presentation"
+            >
+              Cari… (contoh)
+            </div>
           </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-2 sm:self-center"
+            onClick={() => void logout()}
+          >
+            <LogOut className="size-4" />
+            Keluar
+          </Button>
         </div>
       </div>
     </header>
