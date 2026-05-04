@@ -18,20 +18,26 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### API Configuration (Dev/Prod)
 
+Browser memanggil **same-origin** path `/jobs-api/*` dan `/mana-uang-api/*`; Next.js
+meng-**rewrite** ke backend lewat `JOBS_API_BASE_URL` dan `MANA_UANG_API_BASE_URL`
+(lihat `next.config.ts`). Berguna saat frontend ditunnel (mis. Cloudflare) tanpa
+mementer koneksi langsung ke IP/port backend dari browser.
+
 Copy env example:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Set backend URL in `.env.local`:
+Set backend URL untuk server-side rewrites di `.env.local`:
 
 ```bash
-NEXT_PUBLIC_API_BASE_URL=http://100.123.25.78:8088
+JOBS_API_BASE_URL=http://100.123.25.78:8088
+MANA_UANG_API_BASE_URL=http://100.123.25.78:8089
 ```
 
-If `NEXT_PUBLIC_API_BASE_URL` is not set, app will fallback to dynamic host
-(`http(s)://<current-host>:8088`).
+Jika tidak diset, Next fallback ke `NEXT_PUBLIC_*` lalu ke `http://127.0.0.1:8088` /
+`http://127.0.0.1:8089` saat build/dev config dibaca.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

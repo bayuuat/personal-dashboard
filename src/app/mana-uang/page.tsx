@@ -80,12 +80,11 @@ export default function ManaUangPage() {
   const [editItem, setEditItem] = useState<{ id: number; kategori: string } | null>(null);
   const [newCategory, setNewCategory] = useState("");
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_MANA_UANG_API_BASE_URL?.replace(/\/$/, "");
-
+  /** Same-origin; Next rewrites /mana-uang-api/* ke backend mana-uang /api/* */
   const getApiUrl = useCallback((path: string) => {
-    if (apiBaseUrl) return `${apiBaseUrl}${path}`;
-    return `/api/jobs${path}`;
-  }, [apiBaseUrl]);
+    const trimmed = path.startsWith("/api/") ? path.slice(5) : path.replace(/^\//, "");
+    return `/mana-uang-api/${trimmed}`;
+  }, []);
 
   const selectedMonthValue = selectedMonth === "all" ? "" : selectedMonth;
   const summaryQuery = selectedMonthValue ? `?month=${selectedMonthValue}` : "";

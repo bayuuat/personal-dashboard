@@ -39,12 +39,11 @@ export default function Dashboard() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
-
+  /** Same-origin; Next rewrites /jobs-api/* ke backend jobs /api/* */
   const getApiUrl = useCallback((path: string) => {
-    if (apiBaseUrl) return `${apiBaseUrl}${path}`;
-    return `/api/mana-uang${path}`;
-  }, [apiBaseUrl]);
+    const trimmed = path.startsWith("/api/") ? path.slice(5) : path.replace(/^\//, "");
+    return `/jobs-api/${trimmed}`;
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     const offset = (page - 1) * PAGE_SIZE;
